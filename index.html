@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+	<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+
+	<!-- Latest compiled and minified JavaScript -->
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+
+
+	<style>
+		.label
+		{
+			pointer-events: none;
+			font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+			font-size: 15px;
+
+		}
+		.axis {
+			font: 15px sans-serif;
+		}
+
+		.axis path,
+		.axis line {
+			fill: none;
+			stroke: #000;
+			shape-rendering: crispEdges;
+			stroke-width: 1px;
+		}
+		.svgTooltip {
+			position: absolute;
+			text-align: left;
+			border-radius: 25px;
+			width: 180px;
+			height: 130px;
+			padding: 8px;
+			font: 10px sans-serif;
+			color:#fff;
+			background: #000000;
+			pointer-events: none;
+		}
+
+		.barTooltip {
+			position: absolute;
+			text-align: left;
+			border-radius: 25px;
+			width: 180px;
+			height: 130px;
+			padding: 8px;
+			font: 10px sans-serif;
+			color:#fff;
+			background: #000000;
+			pointer-events: none;
+		}
+
+		span {
+		    overflow: hidden;
+		}
+		p{
+			font-size: 140%;
+		}
+		.outer{
+			margin-left: 50px;
+		}
+		
+
+
+	</style>
+</head>
+<body>
+
+		<div id="top" class="outer">
+			<h1>Pokemon Types Data Visualization</h1>
+		 	<div class="btn-group" style="margin-top: 20px;">
+				<button type="button" data-gen="0" onclick="changeGen(this.getAttribute('data-gen'))" class="btn btn-primary active">All generations</button>
+				<button type="button" data-gen="1" onclick="changeGen(this.getAttribute('data-gen'))" class="btn btn-primary">Generation I</button>
+				<button type="button" data-gen="2" onclick="changeGen(this.getAttribute('data-gen'))" class="btn btn-primary">Generation II</button>
+				<button type="button" data-gen="3" onclick="changeGen(this.getAttribute('data-gen'))" class="btn btn-primary">Generation III</button>
+				<button type="button" data-gen="4" onclick="changeGen(this.getAttribute('data-gen'))" class="btn btn-primary">Generation IV</button>
+				<button type="button" data-gen="5" onclick="changeGen(this.getAttribute('data-gen'))" class="btn btn-primary">Generation V</button>
+				<button type="button" data-gen="6" onclick="changeGen(this.getAttribute('data-gen'))" class="btn btn-primary">Generation VI</button>
+			</div>
+			<button type="button" id="statsBtn" style="margin-top: 20px;" onclick="hideTreeMap(); showStats();" class="btn btn-primary">Average Stats Comparison</button>
+		</div>
+
+		<div id="treeMapSvg" class="treeMapSvg outer" style="margin-top: 20px;">
+			<div id="desc"></div>
+			<div><p style="font-size: 13px;"><i>Hover over subgroups for details.</i></p></div>
+		</div>
+
+		<div id="statsSvg" class="statsSvg outer" style="margin-top: 20px;">
+			<h3>Stats Viewer</h3>
+			<div><p style="font-size: 13px;"><i>Click on a type to see average stats for that type. Keep clicking to add more types to chart for comparison.</i></p></div><br>
+		</div>
+		<button type="button" id="statsBtn" style="margin-top: 20px;" onclick="clearChart()" class="btn btn-danger col-sm-offset-6 statsSvg">Clear Chart</button>
+
+</body>
+</html>
+
+
+<!-- dohvaćanje podataka -->
+<script src="data/type_count.js"></script>
+<script src="data/pokemon_data.js"></script>
+<script src="data/type_names.js"></script>
+
+
+
+<script>
+$( document ).ready(function() {
+    changeGen(1)
+});
+
+function showTreeMap(){
+	$(".treeMapSvg").show()
+}
+function hideTreeMap(){
+	$(".treeMapSvg").hide()
+}
+function showStats(){
+	$("button").removeClass("active")
+	$("#statsBtn").addClass("active")
+	$(".statsSvg").show()
+}
+function hideStats(){
+	$("button").removeClass("active")
+	$(".statsSvg").hide()
+}
+
+var type_colors = [
+	{name: "normal", color: "#A8A878"},
+	{name: "fighting", color: "#C03028"},
+	{name: "flying", color: "#A890F0"},
+	{name: "poison", color: "#A040A0"},
+	{name: "ground", color: "#E0C068"},
+	{name: "rock", color: "#B8A038"},
+	{name: "bug", color: "#A8B820"},
+	{name: "ghost", color: "#705898"},
+	{name: "steel", color: "#B8B8D0"},
+	{name: "fire", color: "#F08030"},
+	{name: "water", color: "#6890F0"},
+	{name: "grass", color: "#78C850"},
+	{name: "electric", color: "#F8D030"},
+	{name: "psychic", color: "#F85888"},
+	{name: "ice", color: "#98D8D8"},
+	{name: "dragon", color: "#7038F8"},
+	{name: "dark", color: "#705848"},
+	{name: "fairy", color: "#EE99AC"},
+	{name: "unknown", color: "#68A090"}
+]
+
+var stats = ["HP", "Attack", "Defense", "Sp.Atk", "Sp.Def", "Speed"]
+
+var statsCanvasWidth = 1300
+var statsCanvasHeight = 330
+
+// svg za bar chart
+var statsCanvas = d3.select("#statsSvg").append("svg")
+	.attr("width", statsCanvasWidth)
+	.attr("height", statsCanvasHeight)
+
+// legend za bar chart
+var statsLegendGroup = statsCanvas.append("g")
+	.attr("class", "statsLegendGroup");
+
+// tooltip za barchart
+var statsTooltip = d3.select("#statsSvg").append("div")
+    .attr("class", "barTooltip")
+    .style("display", "none"); 
+
+var x = d3.scale.ordinal()
+	.domain(d3.range(6))
+	.rangeRoundBands([300, 1200]);
+
+var y = d3.scale.linear()
+	.domain([60, 120])
+	.range([300,10]);
+
+createBarChartAxes()
+
+// predefinirani sadržaj bar charta
+var typesToShow = [
+	{"id":16,"identifier":"dragon","generation_id":1,
+	"stats":[97.88,114.19,98.24,114.38,97.64,88.45]},
+	{"id":12,"identifier":"grass","generation_id":1,
+	"stats":[78.45,94.23,88.84,88.41,84.96,72.05]},
+	{"id":13,"identifier":"electric","generation_id":1,
+	"stats":[72.03,80.49,79.13,101.79,84.08,90.38]},
+	{"id":10,"identifier":"fire","generation_id":1,
+	"stats":[80.71,89.90,86.55,108.98,86.95,83.26]},
+	{"id":18,"identifier":"fairy","generation_id":6,
+	"stats":[74.09,80.18,88.29,95.71,101.82,76.06]}
+];
+
+drawBarChart()
+
+// rectovi za legend sa slikama tipova
+statsLegendGroup.selectAll(".statsLegendRect")
+	.data(createLegend(0,0))
+	.enter()
+	.append("rect")
+	.attr("class", "statsLegendRect")
+	.attr("data-type", function(d) {return d.fill})
+	.attr("x", function(d){ return d.x })
+	.attr("y", function(d){ return d.y })
+	.attr("width", 90)
+	.attr("height", 30)
+	.attr("fill", function(d){ return "url(#"+d.fill+")" })
+	.on("click", function() { dataProcessing(this.getAttribute("data-type")) });
+
+// dodavanje i brisanje podataka za bar chart
+function dataProcessing(type){
+	var check = checkIfExists(type)
+	console.log(check)
+
+	if(!check[0]){
+		typesToShow.push(findByName(type))
+	}else{
+		typesToShow.splice(check[1], 1)
+	}
+	
+
+	function checkIfExists(type){
+		for(var i=0; i<typesToShow.length; i++){
+			if(typesToShow[i].identifier == type){
+				return [true, i];
+			}
+			
+		}
+		return [false, null];
+	}
+
+	function findByName(type){
+		for(var i=0; i<type_names.length; i++){
+			if(type_names[i].identifier == type)
+				return type_names[i]
+		}
+	}
+
+	console.log(typesToShow)
+	drawBarChart()
+}
+
+// očisti bar chart
+function clearChart(){
+	typesToShow = []
+	drawBarChart();
+}
+
+// crtanje rectova koji tvore bar chart
+function drawBarChart(){
+
+	// izbriši sve postojeće
+	d3.selectAll(".barRect").remove()
+
+	var barWidth = 120
+	var barHeight = 300
+
+	var startingPointsX = [375-barWidth/2, 525-barWidth/2, 675-barWidth/2, 825-barWidth/2, 975-barWidth/2, 1125-barWidth/2]
+
+	newBarWidth = barWidth/typesToShow.length
+
+	// dodaj nove rectove za bar chart, širina svakog ovisi o tome koliko je tipova zadano
+	for(var f=0; f<typesToShow.length; f++){
+		statsCanvas.selectAll(".aiosdjoidj")
+			.data(typesToShow[f].stats)
+			.enter()
+			.append("rect")
+			.attr("class", "barRect")
+			.attr("data-type", typesToShow[f].identifier)
+			.attr("x", function(d, i){ return (startingPointsX[i] + f*newBarWidth) })
+			.attr("y", function(d){ return 300 - barHeight + y(d)})
+			.attr("width", newBarWidth)
+			.attr("height", function(d){ return barHeight - y(d);})
+			.attr("fill", function(d){ return findColorByType(typesToShow[f].identifier) })
+		    .on("mouseover", mouseover)
+		    .on("mousemove", mousemove)
+		    .on("mouseout", mouseout);
+	}
+
+	function findColorByType(type){
+		for(var i=0; i<type_colors.length; i++){
+			if(type == type_colors[i].name)
+				return type_colors[i].color
+		}
+	}
+
+	function mouseover() {
+		statsTooltip.style("display", "inline");
+	}
+
+	function mousemove(d, i) 
+	{
+		var type = (this.getAttribute("data-type"))
+		
+		var w=20
+		var h=60
+
+		$(".barTooltip").html('');
+		$(".barTooltip").append('<br><p>Type: <img src="img/'+type+'.png" height="'+w+'" width="'+h+'"></p>');
+
+		$(".barTooltip").append('<p>Attribute name: ' + stats[i] + '</p>');
+		$(".barTooltip").append('<p>Attribute value: ' + d + '</p>');
+		//$(".svgTooltip").append('<p>Total in subgroup: ' + d.value + '</p>');
+
+		statsTooltip
+			.style("left", (d3.event.pageX) + "px")
+			.style("top", (d3.event.pageY) + "px");
+		
+	}
+
+	function mouseout() {
+		statsTooltip.style("display", "none");
+	}
+}
+
+// kreiranje osi bar charta
+function createBarChartAxes(){
+
+
+	var startingPointsX = [325-barWidth/2, 575-barWidth/2, 725-barWidth/2, 875-barWidth/2, 1025-barWidth/2, 1175-barWidth/2]
+	var barWidth = 120
+	var barHeight = 300
+
+	d3.selectAll("text").remove();
+	d3.selectAll("path").remove();
+	d3.selectAll("textPath").remove();
+
+
+	// x os
+	var xAxis = d3.svg.axis()
+		.scale(x)
+		.orient("bottom")
+		.tickFormat(function(d, i) {
+			return stats[i]
+		});
+
+	// y os
+	var yAxis = d3.svg.axis()
+		.scale(y)
+		.orient("left")
+		.ticks(6);
+
+	// grupa za x-os	
+	var xAxisGroup = statsCanvas.append("g")
+		.attr("class", "x axis")
+		// pomice dolje za 300
+		.attr("transform", "translate(0,300)")
+		.call(xAxis)
+	xAxisGroup.selectAll("barText")
+		.style("text-anchor", "middle")
+
+	// grupa za y-os
+	var yAxisGroup = statsCanvas.append("g")
+		.attr("class", "y axis")
+		//desno za 300
+		.attr("transform", "translate(300,0)")
+		.call(yAxis)
+		.append("text")
+		.attr("transform", "rotate(-90)")
+		.attr("x", -45)
+		.attr("y", 3)
+		.attr("dy", ".71em")
+		.text("Value");
+
+}
+
+// kreira podatke za legend
+function createLegend(startX, startY)
+{
+	var typeImages = ["bug","dark","dragon","electric","fairy","fighting","fire","flying","ghost","grass","ground","ice","normal","poison","psychic","rock","steel","water"]
+
+	var coordArray = []
+	var vertOffset = 35;
+	var horizOffset = 100;
+	for(var i=0; i<typeImages.length; i++)
+	{
+		if(i<9){
+			coordArray.push({
+				x: startX,
+				y: startY + i*vertOffset,
+				fill: typeImages[i]
+			})
+		}else{
+			coordArray.push({
+				x: startX + horizOffset,
+				y: startY + (i-9)*vertOffset,
+				fill: typeImages[i]
+			})
+		}
+		
+	}
+
+	return coordArray;
+}
+
+
+
+
+</script>
+<!-- dohvaćanje treemap i defs sa slikama -->
+<script src="js/treeMap.js"></script>
+<script src="js/defs.js"></script>
